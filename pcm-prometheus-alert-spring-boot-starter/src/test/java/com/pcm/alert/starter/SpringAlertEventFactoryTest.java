@@ -24,6 +24,8 @@ public class SpringAlertEventFactoryTest {
         properties.setEnvironment("unit");
         properties.getRequest().setSlowThresholdMs(1000);
         properties.getMetric().setThreadThreshold(500);
+        properties.getMetric().setCpuThreshold(0.8);
+        properties.getException().setStackTraceMaxLines(20);
         MockEnvironment env = new MockEnvironment();
         factory = new SpringAlertEventFactory(properties, env);
     }
@@ -45,6 +47,39 @@ public class SpringAlertEventFactoryTest {
         Assert.assertEquals("trace-123", event.getTraceId());
         Assert.assertTrue(event.getSummary().contains("IllegalStateException"));
         Assert.assertNotNull(event.getStackTrace());
+    }
+
+    @Test
+    public void shouldTruncateStackTrace() {
+        properties.getException().setStackTraceMaxLines(5);
+        HttpServletRequest request = mock(HttpServletRequest.class);
+        when(request.getMethod()).thenReturn("GET");
+        when(request.getRequestURI()).thenReturn("/demo/error");
+
+        AlertEvent event = factory.fromException(new RuntimeException("deep"), request);
+
+        Assert.assertNotNull(event.getStackTrace());
+        String[] lines = event.getStackTrace().split("\\r?\\n");
+        Assert.assertTrue("StackTrace should be truncated to <= 5 + truncation line",
+                lines.length <= 6);
+        Assert.assertTrue(event.getStackTrace().contains("more lines"));
+    }
+
+    @Test
+    public void shouldExcludeConfiguredExceptions() {
+        // MissingServletRequestParameterException is in default exclude list
+        Assert.assertTrue(factory.isExcluded(
+                new org.springframework.web.bind.MissingServletRequestParameterException("id", "String")));
+
+        // IllegalStateException is not in exclude list
+        Assert.assertFalse(factory.isExcluded(new IllegalStateException("test")));
+    }
+
+    @Test
+    public void shouldNotExcludeWhenListEmpty() {
+        properties.getException().setExcludeExceptions(new String[0]);
+        Assert.assertFalse(factory.isExcluded(
+                new org.springframework.web.bind.MissingServletRequestParameterException("id", "String")));
     }
 
     @Test
@@ -90,6 +125,23 @@ public class SpringAlertEventFactoryTest {
 
         Assert.assertEquals(AlertType.THREAD_COUNT, event.getType());
         Assert.assertTrue(event.getSummary().contains("600"));
+    }
+
+    @Test
+    public void shouldCreateCpuUsageEvent() {
+        AlertEvent event = factory.fromCpuUsage(0.92);
+
+        Assert.assertEquals(AlertType.CPU_USAGE, event.getType());
+        Assert.assertTrue(event.getSummary().contains("92"));
+    }
+
+    @Test
+    public void shouldCreateRecoveryEvent() {
+        AlertEvent event = factory.recovery(AlertType.JVM_MEMORY, "JVM memory");
+
+        Assert.assertEquals(AlertType.JVM_MEMORY, event.getType());
+        Assert.assertEquals(com.pcm.alert.core.AlertLevel.INFO, event.getLevel());
+        Assert.assertTrue(event.getSummary().contains("recovered"));
     }
 
     @Test

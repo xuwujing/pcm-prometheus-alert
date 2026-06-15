@@ -20,7 +20,7 @@ public class DefaultAlertMessageRendererTest {
         event.setSummary("slow request");
         event.setDetail("threshold exceeded");
 
-        DefaultAlertMessageRenderer renderer = new DefaultAlertMessageRenderer("http://127.0.0.1/mock");
+        DefaultAlertMessageRenderer renderer = new DefaultAlertMessageRenderer("http://127.0.0.1/mock", WebhookFormat.DEFAULT);
         AlertMessage message = renderer.render(event);
 
         Assert.assertEquals(AlertType.SLOW_REQUEST, message.getType());

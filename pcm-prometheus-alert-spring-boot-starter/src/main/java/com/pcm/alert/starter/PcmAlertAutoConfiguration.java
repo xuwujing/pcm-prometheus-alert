@@ -11,6 +11,9 @@ import com.pcm.alert.core.DefaultAlertRuleEvaluator;
 import com.pcm.alert.core.NoopAlertPublisher;
 import com.pcm.alert.core.SimpleAlertDeduplicator;
 import com.pcm.alert.core.WebhookAlertPublisher;
+import com.pcm.alert.core.WebhookFormat;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -37,6 +40,7 @@ import org.springframework.web.servlet.DispatcherServlet;
 @EnableConfigurationProperties(AlertProperties.class)
 @ConditionalOnProperty(prefix = "pcm.alert", name = "enabled", havingValue = "true")
 public class PcmAlertAutoConfiguration {
+    private static final Logger log = LoggerFactory.getLogger(PcmAlertAutoConfiguration.class);
 
     @Bean
     @ConditionalOnMissingBean
@@ -61,7 +65,8 @@ public class PcmAlertAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean
     public AlertMessageRenderer alertMessageRenderer(AlertProperties properties) {
-        return new DefaultAlertMessageRenderer(properties.getWebhook());
+        WebhookFormat format = parseWebhookFormat(properties.getWebhookFormat());
+        return new DefaultAlertMessageRenderer(properties.getWebhook(), format);
     }
 
     /**
@@ -101,8 +106,33 @@ public class PcmAlertAutoConfiguration {
     public AlertManager alertManager(AlertRuleEvaluator ruleEvaluator,
                                      AlertDeduplicator deduplicator,
                                      AlertMessageRenderer messageRenderer,
-                                     AlertPublisher publisher) {
-        return new AlertManager(ruleEvaluator, deduplicator, messageRenderer, publisher);
+                                     AlertPublisher publisher,
+                                     AlertProperties properties) {
+        AlertManager alertManager = new AlertManager(ruleEvaluator, deduplicator, messageRenderer, publisher);
+
+        // 配置按级别路由
+        AlertProperties.Custom custom = properties.getCustom();
+        alertManager.configureLevelRouting(
+                custom.isLevelRoutingEnabled(),
+                custom.getFatalWebhook(),
+                custom.getErrorWebhook(),
+                custom.getWarnWebhook(),
+                custom.getInfoWebhook()
+        );
+
+        // 扩展集成日志
+        AlertProperties.Extensions extensions = properties.getExtensions();
+        if (extensions.isPrometheusEnabled()) {
+            log.info("PCM Alert: Prometheus integration enabled (metrics exposed via /actuator/prometheus)");
+        }
+        if (extensions.isSkywalkingEnabled()) {
+            log.info("PCM Alert: SkyWalking integration enabled (traceId from SkyWalking agent)");
+        }
+        if (extensions.isElkEnabled()) {
+            log.info("PCM Alert: ELK integration enabled (alert events logged for logstash collection)");
+        }
+
+        return alertManager;
     }
 
     /**
@@ -139,5 +169,20 @@ public class PcmAlertAutoConfiguration {
                                                     SpringAlertEventFactory eventFactory,
                                                     AlertManager alertManager) {
         return new MetricAlertCollector(properties, eventFactory, alertManager);
+    }
+
+    /**
+     * 解析 webhook 格式字符串。
+     */
+    private WebhookFormat parseWebhookFormat(String format) {
+        if (format == null) {
+            return WebhookFormat.DEFAULT;
+        }
+        switch (format.toLowerCase()) {
+            case "dingtalk": return WebhookFormat.DINGTALK;
+            case "feishu":   return WebhookFormat.FEISHU;
+            case "wecom":    return WebhookFormat.WECOM;
+            default:         return WebhookFormat.DEFAULT;
+        }
     }
 }

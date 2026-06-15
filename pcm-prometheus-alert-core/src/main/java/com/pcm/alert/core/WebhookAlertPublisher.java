@@ -8,12 +8,14 @@ import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.util.EnumMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
  * Webhook 推送器 —— 通过 HTTP POST 发送 JSON 告警消息。
  * <p>
+ * 支持多 IM 平台格式：默认 JSON、钉钉、飞书、企业微信。
  * 使用 JDK 原生 HttpURLConnection，无额外依赖。
  * 推送失败仅记录 WARN 日志，不向上抛出异常。
  * </p>
@@ -23,9 +25,25 @@ public class WebhookAlertPublisher implements AlertPublisher {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final int timeoutMs;
+    private final EnumMap<WebhookFormat, WebhookPayloadBuilder> payloadBuilders = new EnumMap<>(WebhookFormat.class);
 
     public WebhookAlertPublisher(int timeoutMs) {
         this.timeoutMs = timeoutMs;
+        registerDefaults();
+    }
+
+    /**
+     * 注册自定义 payload 构建器。
+     */
+    public void registerPayloadBuilder(WebhookFormat format, WebhookPayloadBuilder builder) {
+        payloadBuilders.put(format, builder);
+    }
+
+    private void registerDefaults() {
+        payloadBuilders.put(WebhookFormat.DEFAULT, new DefaultWebhookPayloadBuilder());
+        payloadBuilders.put(WebhookFormat.DINGTALK, new DingTalkWebhookPayloadBuilder());
+        payloadBuilders.put(WebhookFormat.FEISHU, new FeishuWebhookPayloadBuilder());
+        payloadBuilders.put(WebhookFormat.WECOM, new WeComWebhookPayloadBuilder());
     }
 
     @Override
@@ -62,16 +80,11 @@ public class WebhookAlertPublisher implements AlertPublisher {
     }
 
     /**
-     * 构建 JSON 请求体。
+     * 根据消息的 webhookFormat 选择对应的 payload 构建器。
      */
     protected String buildPayload(AlertMessage message) throws Exception {
-        Map<String, Object> payload = new LinkedHashMap<>();
-        payload.put("title", message.getTitle());
-        payload.put("content", message.getContent());
-        payload.put("level", message.getLevel());
-        payload.put("type", message.getType());
-        payload.put("occurredAt", String.valueOf(message.getOccurredAt()));
-        payload.put("attributes", message.getAttributes());
-        return objectMapper.writeValueAsString(payload);
+        WebhookFormat format = message.getWebhookFormat() != null ? message.getWebhookFormat() : WebhookFormat.DEFAULT;
+        WebhookPayloadBuilder builder = payloadBuilders.getOrDefault(format, payloadBuilders.get(WebhookFormat.DEFAULT));
+        return builder.build(message);
     }
 }

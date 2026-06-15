@@ -17,6 +17,9 @@ public class AlertProperties {
     /** webhook 地址 */
     private String webhook;
 
+    /** webhook 消息格式：default / dingtalk / feishu / wecom */
+    private String webhookFormat = "default";
+
     /** 服务名（未配置时取 spring.application.name） */
     private String serviceName;
 
@@ -28,6 +31,8 @@ public class AlertProperties {
     private ExceptionAlert exception = new ExceptionAlert();
     private Request request = new Request();
     private Metric metric = new Metric();
+    private Extensions extensions = new Extensions();
+    private Custom custom = new Custom();
 
     // ---- getters / setters ----
 
@@ -45,6 +50,14 @@ public class AlertProperties {
 
     public void setWebhook(String webhook) {
         this.webhook = webhook;
+    }
+
+    public String getWebhookFormat() {
+        return webhookFormat;
+    }
+
+    public void setWebhookFormat(String webhookFormat) {
+        this.webhookFormat = webhookFormat;
     }
 
     public String getServiceName() {
@@ -101,6 +114,22 @@ public class AlertProperties {
 
     public void setMetric(Metric metric) {
         this.metric = metric;
+    }
+
+    public Extensions getExtensions() {
+        return extensions;
+    }
+
+    public void setExtensions(Extensions extensions) {
+        this.extensions = extensions;
+    }
+
+    public Custom getCustom() {
+        return custom;
+    }
+
+    public void setCustom(Custom custom) {
+        this.custom = custom;
     }
 
     /** 推送器配置 */
@@ -165,6 +194,15 @@ public class AlertProperties {
     public static class ExceptionAlert {
         /** 是否启用异常告警，默认 true */
         private boolean enabled = true;
+        /** 排除的异常类名（全限定名），匹配的异常不触发告警 */
+        private String[] excludeExceptions = new String[]{
+                "org.springframework.web.bind.MissingServletRequestParameterException",
+                "org.springframework.web.method.annotation.MethodArgumentTypeMismatchException",
+                "org.springframework.web.HttpRequestMethodNotSupportedException",
+                "org.springframework.web.HttpMediaTypeNotSupportedException"
+        };
+        /** 堆栈最大行数，默认 20，超过则截断 */
+        private int stackTraceMaxLines = 20;
 
         public boolean isEnabled() {
             return enabled;
@@ -172,6 +210,22 @@ public class AlertProperties {
 
         public void setEnabled(boolean enabled) {
             this.enabled = enabled;
+        }
+
+        public String[] getExcludeExceptions() {
+            return excludeExceptions;
+        }
+
+        public void setExcludeExceptions(String[] excludeExceptions) {
+            this.excludeExceptions = excludeExceptions;
+        }
+
+        public int getStackTraceMaxLines() {
+            return stackTraceMaxLines;
+        }
+
+        public void setStackTraceMaxLines(int stackTraceMaxLines) {
+            this.stackTraceMaxLines = stackTraceMaxLines;
         }
     }
 
@@ -243,6 +297,12 @@ public class AlertProperties {
         private double jvmMemoryThreshold = 0.8;
         /** 线程数阈值，默认 500 */
         private int threadThreshold = 500;
+        /** 是否启用 CPU 使用率告警，默认 false（需要较多采样周期） */
+        private boolean cpuEnabled = false;
+        /** CPU 使用率阈值（0-1），默认 0.8 */
+        private double cpuThreshold = 0.8;
+        /** 是否启用恢复事件（指标回落后发送恢复通知），默认 false */
+        private boolean recoveryEnabled = false;
 
         public boolean isEnabled() {
             return enabled;
@@ -274,6 +334,125 @@ public class AlertProperties {
 
         public void setThreadThreshold(int threadThreshold) {
             this.threadThreshold = threadThreshold;
+        }
+
+        public boolean isCpuEnabled() {
+            return cpuEnabled;
+        }
+
+        public void setCpuEnabled(boolean cpuEnabled) {
+            this.cpuEnabled = cpuEnabled;
+        }
+
+        public double getCpuThreshold() {
+            return cpuThreshold;
+        }
+
+        public void setCpuThreshold(double cpuThreshold) {
+            this.cpuThreshold = cpuThreshold;
+        }
+
+        public boolean isRecoveryEnabled() {
+            return recoveryEnabled;
+        }
+
+        public void setRecoveryEnabled(boolean recoveryEnabled) {
+            this.recoveryEnabled = recoveryEnabled;
+        }
+    }
+
+    /** 扩展集成配置 —— 对接 Prometheus / SkyWalking / ELK 等外部系统 */
+    public static class Extensions {
+        /** 是否启用 Prometheus 指标暴露（通过 /actuator/prometheus） */
+        private boolean prometheusEnabled = false;
+        /** 是否启用 SkyWalking 链路追踪集成（读取 traceId 等） */
+        private boolean skywalkingEnabled = false;
+        /** 是否启用 ELK 日志集成（将告警事件写入日志，由 logstash 采集） */
+        private boolean elkEnabled = false;
+
+        public boolean isPrometheusEnabled() {
+            return prometheusEnabled;
+        }
+
+        public void setPrometheusEnabled(boolean prometheusEnabled) {
+            this.prometheusEnabled = prometheusEnabled;
+        }
+
+        public boolean isSkywalkingEnabled() {
+            return skywalkingEnabled;
+        }
+
+        public void setSkywalkingEnabled(boolean skywalkingEnabled) {
+            this.skywalkingEnabled = skywalkingEnabled;
+        }
+
+        public boolean isElkEnabled() {
+            return elkEnabled;
+        }
+
+        public void setElkEnabled(boolean elkEnabled) {
+            this.elkEnabled = elkEnabled;
+        }
+    }
+
+    /** 自定义告警配置 —— 多 webhook 路由 + 自定义事件 */
+    public static class Custom {
+        /** 是否启用自定义告警 API（通过 AlertManager 手动触发），默认 true */
+        private boolean enabled = true;
+        /** 按告警级别路由到不同 webhook */
+        private boolean levelRoutingEnabled = false;
+        /** 各告警级别的 webhook 地址 */
+        private String fatalWebhook;
+        private String errorWebhook;
+        private String warnWebhook;
+        private String infoWebhook;
+
+        public boolean isEnabled() {
+            return enabled;
+        }
+
+        public void setEnabled(boolean enabled) {
+            this.enabled = enabled;
+        }
+
+        public boolean isLevelRoutingEnabled() {
+            return levelRoutingEnabled;
+        }
+
+        public void setLevelRoutingEnabled(boolean levelRoutingEnabled) {
+            this.levelRoutingEnabled = levelRoutingEnabled;
+        }
+
+        public String getFatalWebhook() {
+            return fatalWebhook;
+        }
+
+        public void setFatalWebhook(String fatalWebhook) {
+            this.fatalWebhook = fatalWebhook;
+        }
+
+        public String getErrorWebhook() {
+            return errorWebhook;
+        }
+
+        public void setErrorWebhook(String errorWebhook) {
+            this.errorWebhook = errorWebhook;
+        }
+
+        public String getWarnWebhook() {
+            return warnWebhook;
+        }
+
+        public void setWarnWebhook(String warnWebhook) {
+            this.warnWebhook = warnWebhook;
+        }
+
+        public String getInfoWebhook() {
+            return infoWebhook;
+        }
+
+        public void setInfoWebhook(String infoWebhook) {
+            this.infoWebhook = infoWebhook;
         }
     }
 }

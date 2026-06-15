@@ -9,6 +9,7 @@ pcm:
   alert:
     enabled: true
     webhook: http://127.0.0.1:8089/mock/webhook
+    webhook-format: default
     service-name: ${spring.application.name}
     environment: local
     publisher:
@@ -20,14 +21,40 @@ pcm:
       cooldown-seconds: 5
     exception:
       enabled: true
+      stack-trace-max-lines: 20
+      exclude-exceptions:
+        - org.springframework.web.bind.MissingServletRequestParameterException
+        - org.springframework.web.method.annotation.MethodArgumentTypeMismatchException
+        - org.springframework.web.HttpRequestMethodNotSupportedException
+        - org.springframework.web.HttpMediaTypeNotSupportedException
     request:
       enabled: true
       slow-threshold-ms: 1000
+      status-code-alert-enabled: true
+      status-code-alert-thresholds:
+        - 500
+        - 502
+        - 503
+        - 504
+      exclude-paths:
+        - /actuator/**
+        - /health
+        - /favicon.ico
     metric:
       enabled: true
       interval-seconds: 30
       jvm-memory-threshold: 0.95
       thread-threshold: 500
+      cpu-enabled: false
+      cpu-threshold: 0.8
+      recovery-enabled: false
+    extensions:
+      prometheus-enabled: false
+      skywalking-enabled: false
+      elk-enabled: false
+    custom:
+      enabled: true
+      level-routing-enabled: false
 
 management:
   endpoints:

@@ -32,12 +32,15 @@ public class SpringAlertEventFactory {
 
     /**
      * 从异常构造事件。
+     * <p>
+     * 堆栈按 stackTraceMaxLines 截断，超出部分丢弃。
+     * </p>
      */
     public AlertEvent fromException(Throwable throwable, HttpServletRequest request) {
         AlertEvent event = baseEvent(AlertType.EXCEPTION, AlertLevel.ERROR, AlertSource.MVC);
         event.setSummary(throwable.getClass().getName() + ": " + safe(throwable.getMessage()));
         event.setDetail("Unhandled request exception");
-        event.setStackTrace(stackTrace(throwable));
+        event.setStackTrace(stackTrace(throwable, properties.getException().getStackTraceMaxLines()));
         fillRequest(event, request);
         return event;
     }
@@ -84,6 +87,26 @@ public class SpringAlertEventFactory {
         event.setStatusCode(statusCode);
         event.setCostMs(costMs);
         fillRequest(event, request);
+        return event;
+    }
+
+    /**
+     * 从 CPU 使用率构造事件。
+     */
+    public AlertEvent fromCpuUsage(double usage) {
+        AlertEvent event = baseEvent(AlertType.CPU_USAGE, AlertLevel.WARN, AlertSource.METRIC);
+        event.setSummary("CPU usage " + String.format("%.2f", usage * 100) + "%");
+        event.setDetail("threshold=" + properties.getMetric().getCpuThreshold());
+        return event;
+    }
+
+    /**
+     * 构造恢复事件 —— 指标回落后通知。
+     */
+    public AlertEvent recovery(AlertType type, String metricName) {
+        AlertEvent event = baseEvent(type, AlertLevel.INFO, AlertSource.METRIC);
+        event.setSummary(metricName + " recovered");
+        event.setDetail(metricName + " has returned to normal");
         return event;
     }
 
@@ -152,9 +175,42 @@ public class SpringAlertEventFactory {
         return value == null ? "" : value;
     }
 
-    private String stackTrace(Throwable throwable) {
+    /**
+     * 将异常堆栈转为字符串，按 maxLines 截断。
+     */
+    private String stackTrace(Throwable throwable, int maxLines) {
         StringWriter stringWriter = new StringWriter();
         throwable.printStackTrace(new PrintWriter(stringWriter));
-        return stringWriter.toString();
+        String full = stringWriter.toString();
+        if (maxLines <= 0) {
+            return full;
+        }
+        String[] lines = full.split("\\r?\\n");
+        if (lines.length <= maxLines) {
+            return full;
+        }
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < maxLines; i++) {
+            sb.append(lines[i]).append('\n');
+        }
+        sb.append("\t... (").append(lines.length - maxLines).append(" more lines)");
+        return sb.toString();
+    }
+
+    /**
+     * 判断异常是否在排除列表中。
+     */
+    public boolean isExcluded(Throwable throwable) {
+        String[] excludeExceptions = properties.getException().getExcludeExceptions();
+        if (excludeExceptions == null || excludeExceptions.length == 0) {
+            return false;
+        }
+        String className = throwable.getClass().getName();
+        for (String exclude : excludeExceptions) {
+            if (className.equals(exclude)) {
+                return true;
+            }
+        }
+        return false;
     }
 }

@@ -14,6 +14,9 @@
     <modules>
         <module>pcm-prometheus-alert-core</module>
         <module>pcm-prometheus-alert-spring-boot-starter</module>
+        <module>pcm-prometheus-alert-sql-starter</module>
+        <module>pcm-prometheus-alert-extensions</module>
+        <module>pcm-prometheus-alert-web</module>
         <module>pcm-prometheus-alert-demo</module>
     </modules>
 

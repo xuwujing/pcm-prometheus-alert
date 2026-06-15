@@ -28,6 +28,9 @@ public class AlertMessage {
     /** 目标 webhook 地址 */
     private String webhook;
 
+    /** Webhook 消息格式，默认 DEFAULT */
+    private WebhookFormat webhookFormat = WebhookFormat.DEFAULT;
+
     /** 模板名称（预留） */
     private String templateName = "default";
 
@@ -80,6 +83,14 @@ public class AlertMessage {
 
     public void setWebhook(String webhook) {
         this.webhook = webhook;
+    }
+
+    public WebhookFormat getWebhookFormat() {
+        return webhookFormat;
+    }
+
+    public void setWebhookFormat(WebhookFormat webhookFormat) {
+        this.webhookFormat = webhookFormat;
     }
 
     public String getTemplateName() {

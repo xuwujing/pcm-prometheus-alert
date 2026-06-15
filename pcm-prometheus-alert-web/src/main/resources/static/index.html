@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PCM Alert Dashboard</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f0f2f5; color: #333; }
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff; padding: 24px 32px; }
+        .header h1 { font-size: 24px; font-weight: 600; }
+        .header p { opacity: 0.85; margin-top: 4px; font-size: 14px; }
+        .container { max-width: 1200px; margin: 24px auto; padding: 0 24px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
+        .card { background: #fff; border-radius: 8px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+        .card h3 { font-size: 16px; color: #666; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1px solid #f0f0f0; }
+        .stat { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #fafafa; }
+        .stat:last-child { border-bottom: none; }
+        .stat-label { color: #888; font-size: 13px; }
+        .stat-value { font-weight: 600; font-size: 14px; }
+        .stat-value.ok { color: #52c41a; }
+        .stat-value.warn { color: #faad14; }
+        .stat-value.error { color: #ff4d4f; }
+        .status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+        .status-dot.active { background: #52c41a; }
+        .status-dot.inactive { background: #d9d9d9; }
+        .alert-types { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+        .alert-tag { padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 500; }
+        .alert-tag.exception { background: #fff1f0; color: #ff4d4f; }
+        .alert-tag.slow { background: #fff7e6; color: #fa8c16; }
+        .alert-tag.status { background: #fff1f0; color: #ff4d4f; }
+        .alert-tag.metric { background: #e6f7ff; color: #1890ff; }
+        .progress-bar { width: 100%; height: 8px; background: #f0f0f0; border-radius: 4px; margin-top: 6px; overflow: hidden; }
+        .progress-fill { height: 100%; border-radius: 4px; transition: width 0.5s; }
+        .progress-fill.safe { background: #52c41a; }
+        .progress-fill.warn { background: #faad14; }
+        .progress-fill.danger { background: #ff4d4f; }
+        .refresh { text-align: right; margin-bottom: 16px; }
+        .refresh button { background: #667eea; color: #fff; border: none; padding: 8px 20px; border-radius: 4px; cursor: pointer; font-size: 13px; }
+        .refresh button:hover { background: #5a6fd6; }
+        .footer { text-align: center; color: #999; font-size: 12px; padding: 24px; }
+        .loading { text-align: center; color: #999; padding: 40px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🔔 PCM Alert Dashboard</h1>
+        <p>告警系统运行状态监控</p>
+    </div>
+    <div class="container">
+        <div class="refresh">
+            <button onclick="loadDashboard()">🔄 刷新</button>
+        </div>
+        <div class="grid" id="dashboard">
+            <div class="loading">加载中...</div>
+        </div>
+    </div>
+    <div class="footer">PCM Prometheus Alert v0.1.0</div>
+
+    <script>
+        function loadDashboard() {
+            document.getElementById('dashboard').innerHTML = '<div class="loading">加载中...</div>';
+            fetch('/api/dashboard')
+                .then(res => res.json())
+                .then(data => render(data))
+                .catch(err => {
+                    document.getElementById('dashboard').innerHTML =
+                        '<div class="loading" style="color:#ff4d4f">加载失败: ' + err.message + '</div>';
+                });
+        }
+
+        function render(data) {
+            const jvm = data.jvm;
+            const sys = data.system;
+            const alert = data.alertStatus;
+
+            const heapPercent = parseFloat(jvm.heapUsagePercent);
+            const heapClass = heapPercent > 80 ? 'danger' : (heapPercent > 60 ? 'warn' : 'safe');
+
+            const html = `
+                <div class="card">
+                    <h3>📊 JVM 内存</h3>
+                    <div class="stat">
+                        <span class="stat-label">堆内存使用率</span>
+                        <span class="stat-value ${heapPercent > 80 ? 'error' : (heapPercent > 60 ? 'warn' : 'ok')}">${jvm.heapUsagePercent}%</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill ${heapClass}" style="width:${Math.min(heapPercent, 100)}%"></div>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-label">已用 / 最大</span>
+                        <span class="stat-value">${formatBytes(jvm.heapUsed)} / ${formatBytes(jvm.heapMax)}</span>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>🧵 线程</h3>
+                    <div class="stat">
+                        <span class="stat-label">当前线程数</span>
+                        <span class="stat-value">${jvm.threadCount}</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-label">峰值线程数</span>
+                        <span class="stat-value">${jvm.peakThreadCount}</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-label">守护线程数</span>
+                        <span class="stat-value">${jvm.daemonThreadCount}</span>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>🖥️ 系统信息</h3>
+                    <div class="stat">
+                        <span class="stat-label">操作系统</span>
+                        <span class="stat-value">${sys.osName}</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-label">CPU 核心数</span>
+                        <span class="stat-value">${sys.availableProcessors}</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-label">系统负载</span>
+                        <span class="stat-value">${sys.systemLoadAverage}</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-label">Java 版本</span>
+                        <span class="stat-value">${sys.javaVersion}</span>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>🚨 告警状态</h3>
+                    <div class="stat">
+                        <span class="stat-label">总开关</span>
+                        <span class="stat-value ${alert.enabled ? 'ok' : 'error'}">
+                            <span class="status-dot ${alert.enabled ? 'active' : 'inactive'}"></span>
+                            ${alert.enabled ? '已启用' : '已禁用'}
+                        </span>
+                    </div>
+                    <div class="alert-types">
+                        <span class="alert-tag exception">🔴 异常告警: ${alert.exceptionAlert}</span>
+                        <span class="alert-tag slow">🟠 慢请求告警: ${alert.slowRequestAlert}</span>
+                        <span class="alert-tag status">🔴 状态码告警: ${alert.statusCodeAlert}</span>
+                        <span class="alert-tag metric">🔵 指标告警: ${alert.metricAlert}</span>
+                    </div>
+                </div>
+            `;
+            document.getElementById('dashboard').innerHTML = html;
+        }
+
+        function formatBytes(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            if (bytes < 1024 * 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+            return (bytes / (1024 * 1024 * 1024)).toFixed(1) + ' GB';
+        }
+
+        loadDashboard();
+    </script>
+</body>
+</html>

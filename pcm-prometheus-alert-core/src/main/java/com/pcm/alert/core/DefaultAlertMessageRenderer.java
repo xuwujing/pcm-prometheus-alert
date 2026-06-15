@@ -10,9 +10,11 @@ package com.pcm.alert.core;
  */
 public class DefaultAlertMessageRenderer implements AlertMessageRenderer {
     private final String webhook;
+    private final WebhookFormat webhookFormat;
 
-    public DefaultAlertMessageRenderer(String webhook) {
+    public DefaultAlertMessageRenderer(String webhook, WebhookFormat webhookFormat) {
         this.webhook = webhook;
+        this.webhookFormat = webhookFormat;
     }
 
     @Override
@@ -21,6 +23,7 @@ public class DefaultAlertMessageRenderer implements AlertMessageRenderer {
         message.setType(event.getType());
         message.setLevel(event.getLevel());
         message.setWebhook(webhook);
+        message.setWebhookFormat(webhookFormat);
         message.setOccurredAt(event.getOccurredAt());
         message.setTitle("[" + event.getLevel() + "] " + event.getType() + " - " + safe(event.getServiceName()));
         message.setContent(buildContent(event));
