@@ -1,0 +1,36 @@
+server:
+  port: 8089
+
+spring:
+  application:
+    name: pcm-alert-demo
+
+pcm:
+  alert:
+    enabled: true
+    webhook: http://127.0.0.1:8089/mock/webhook
+    service-name: ${spring.application.name}
+    environment: local
+    publisher:
+      async: true
+      queue-size: 100
+      timeout-ms: 3000
+    dedupe:
+      enabled: true
+      cooldown-seconds: 5
+    exception:
+      enabled: true
+    request:
+      enabled: true
+      slow-threshold-ms: 1000
+    metric:
+      enabled: true
+      interval-seconds: 30
+      jvm-memory-threshold: 0.95
+      thread-threshold: 500
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
