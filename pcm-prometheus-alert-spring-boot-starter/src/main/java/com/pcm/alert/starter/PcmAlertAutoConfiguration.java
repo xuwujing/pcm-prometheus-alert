@@ -25,11 +25,19 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.util.StringUtils;
 import org.springframework.web.servlet.DispatcherServlet;
 
+/**
+ * PCM Alert 自动装配类。
+ * <p>
+ * 条件：pcm.alert.enabled=true 时生效。
+ * 装配顺序：事件工厂 → 规则评估器 → 去重器 → 消息渲染器 → 推送器 → 告警管理器 → 采集器。
+ * </p>
+ */
 @Configuration
 @EnableScheduling
 @EnableConfigurationProperties(AlertProperties.class)
 @ConditionalOnProperty(prefix = "pcm.alert", name = "enabled", havingValue = "true")
 public class PcmAlertAutoConfiguration {
+
     @Bean
     @ConditionalOnMissingBean
     public SpringAlertEventFactory springAlertEventFactory(AlertProperties properties, Environment environment) {
@@ -56,6 +64,10 @@ public class PcmAlertAutoConfiguration {
         return new DefaultAlertMessageRenderer(properties.getWebhook());
     }
 
+    /**
+     * 异步推送器（默认启用）。
+     * 当 pcm.alert.publisher.async=false 时使用同步推送器。
+     */
     @Bean(destroyMethod = "shutdown")
     @Primary
     @ConditionalOnProperty(prefix = "pcm.alert.publisher", name = "async", havingValue = "true", matchIfMissing = true)
@@ -73,6 +85,9 @@ public class PcmAlertAutoConfiguration {
         return delegateAlertPublisher;
     }
 
+    /**
+     * 底层推送器：有 webhook 配置时用 WebhookAlertPublisher，否则用 NoopAlertPublisher。
+     */
     @Bean
     @ConditionalOnMissingBean(name = "delegateAlertPublisher")
     public AlertPublisher delegateAlertPublisher(AlertProperties properties) {
@@ -90,6 +105,9 @@ public class PcmAlertAutoConfiguration {
         return new AlertManager(ruleEvaluator, deduplicator, messageRenderer, publisher);
     }
 
+    /**
+     * 异常告警处理器 —— 仅在 DispatcherServlet 存在时注册。
+     */
     @Bean
     @ConditionalOnClass(DispatcherServlet.class)
     @ConditionalOnMissingBean
@@ -99,6 +117,9 @@ public class PcmAlertAutoConfiguration {
         return new AlertExceptionResolver(properties, eventFactory, alertManager);
     }
 
+    /**
+     * 慢请求过滤器 —— 仅在 DispatcherServlet 存在时注册。
+     */
     @Bean
     @ConditionalOnClass(DispatcherServlet.class)
     @ConditionalOnMissingBean(name = "pcmAlertSlowRequestFilter")

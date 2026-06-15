@@ -5,23 +5,67 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
 
+/**
+ * 统一告警事件模型。
+ * <p>
+ * 覆盖异常、慢请求、HTTP 状态码、JVM 指标、线程等事件类型，
+ * 由采集器构造后送入 {@link AlertManager} 统一处理。
+ * </p>
+ */
 public class AlertEvent {
+
+    /** 事件唯一标识，默认 UUID */
     private String eventId = UUID.randomUUID().toString();
+
+    /** 告警类型 */
     private AlertType type;
+
+    /** 告警级别，默认 WARN */
     private AlertLevel level = AlertLevel.WARN;
+
+    /** 事件来源 */
     private AlertSource source = AlertSource.MANUAL;
+
+    /** 服务名 */
     private String serviceName;
+
+    /** 环境标识 */
     private String environment;
+
+    /** 主机名 */
     private String host;
+
+    /** 分布式链路 traceId */
     private String traceId;
+
+    /** 告警摘要（短描述） */
     private String summary;
+
+    /** 告警详情（补充信息） */
     private String detail;
+
+    /** 自定义标签 */
     private Map<String, String> tags = new LinkedHashMap<>();
+
+    /** 事件发生时间 */
     private Instant occurredAt = Instant.now();
+
+    /** 异常堆栈（仅异常事件） */
     private String stackTrace;
+
+    /** 请求耗时（毫秒），仅请求类事件 */
     private long costMs;
+
+    /** 请求路径 */
     private String requestPath;
+
+    /** 请求方法（GET/POST 等） */
     private String requestMethod;
+
+    /** HTTP 响应状态码（仅 HTTP_STATUS 事件） */
+    private int statusCode;
+
+    // ---- getters / setters ----
 
     public String getEventId() {
         return eventId;
@@ -149,5 +193,13 @@ public class AlertEvent {
 
     public void setRequestMethod(String requestMethod) {
         this.requestMethod = requestMethod;
+    }
+
+    public int getStatusCode() {
+        return statusCode;
+    }
+
+    public void setStatusCode(int statusCode) {
+        this.statusCode = statusCode;
     }
 }

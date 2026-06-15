@@ -12,6 +12,13 @@ import java.io.StringWriter;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 
+/**
+ * Spring 环境下的告警事件工厂。
+ * <p>
+ * 负责将框架对象（HttpServletRequest、Throwable、JVM 指标）转换为统一的 {@link AlertEvent}，
+ * 自动填充服务名、环境、主机名、traceId 等上下文信息。
+ * </p>
+ */
 public class SpringAlertEventFactory {
     private final AlertProperties properties;
     private final Environment environment;
@@ -23,6 +30,9 @@ public class SpringAlertEventFactory {
         this.hostName = resolveHostName();
     }
 
+    /**
+     * 从异常构造事件。
+     */
     public AlertEvent fromException(Throwable throwable, HttpServletRequest request) {
         AlertEvent event = baseEvent(AlertType.EXCEPTION, AlertLevel.ERROR, AlertSource.MVC);
         event.setSummary(throwable.getClass().getName() + ": " + safe(throwable.getMessage()));
@@ -32,6 +42,9 @@ public class SpringAlertEventFactory {
         return event;
     }
 
+    /**
+     * 从慢请求构造事件。
+     */
     public AlertEvent fromSlowRequest(HttpServletRequest request, long costMs) {
         AlertEvent event = baseEvent(AlertType.SLOW_REQUEST, AlertLevel.WARN, AlertSource.FILTER);
         event.setSummary("Slow request cost " + costMs + "ms");
@@ -41,6 +54,9 @@ public class SpringAlertEventFactory {
         return event;
     }
 
+    /**
+     * 从 JVM 内存使用率构造事件。
+     */
     public AlertEvent fromJvmMemory(double usage, long used, long max) {
         AlertEvent event = baseEvent(AlertType.JVM_MEMORY, AlertLevel.WARN, AlertSource.METRIC);
         event.setSummary("JVM memory usage " + String.format("%.2f", usage * 100) + "%");
@@ -48,10 +64,26 @@ public class SpringAlertEventFactory {
         return event;
     }
 
+    /**
+     * 从线程数构造事件。
+     */
     public AlertEvent fromThreadCount(int count) {
         AlertEvent event = baseEvent(AlertType.THREAD_COUNT, AlertLevel.WARN, AlertSource.METRIC);
         event.setSummary("Thread count " + count);
         event.setDetail("threshold=" + properties.getMetric().getThreadThreshold());
+        return event;
+    }
+
+    /**
+     * 从 HTTP 错误状态码构造事件。
+     */
+    public AlertEvent fromHttpStatus(HttpServletRequest request, int statusCode, long costMs) {
+        AlertEvent event = baseEvent(AlertType.HTTP_STATUS, AlertLevel.ERROR, AlertSource.FILTER);
+        event.setSummary("HTTP status " + statusCode);
+        event.setDetail("Response returned error status " + statusCode + ", cost " + costMs + "ms");
+        event.setStatusCode(statusCode);
+        event.setCostMs(costMs);
+        fillRequest(event, request);
         return event;
     }
 
@@ -75,6 +107,9 @@ public class SpringAlertEventFactory {
         event.setTraceId(resolveTraceId(request));
     }
 
+    /**
+     * 按优先级提取 traceId：X-B3-TraceId → traceId → X-Request-Id。
+     */
     private String resolveTraceId(HttpServletRequest request) {
         String traceId = request.getHeader("X-B3-TraceId");
         if (traceId == null || traceId.length() == 0) {

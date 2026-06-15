@@ -16,6 +16,7 @@ public class DefaultAlertMessageRendererTest {
         event.setRequestPath("/demo/slow");
         event.setRequestMethod("GET");
         event.setCostMs(1200L);
+        event.setStatusCode(500);
         event.setSummary("slow request");
         event.setDetail("threshold exceeded");
 
@@ -28,6 +29,7 @@ public class DefaultAlertMessageRendererTest {
         Assert.assertTrue(message.getTitle().contains("demo-service"));
         Assert.assertTrue(message.getContent().contains("path: /demo/slow"));
         Assert.assertTrue(message.getContent().contains("costMs: 1200"));
+        Assert.assertTrue(message.getContent().contains("statusCode: 500"));
         Assert.assertEquals("trace-1", message.getAttributes().get("traceId"));
     }
 }

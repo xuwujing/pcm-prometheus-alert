@@ -8,6 +8,13 @@ import org.springframework.web.servlet.ModelAndView;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+/**
+ * 异常告警处理器 —— 注册为最高优先级的 HandlerExceptionResolver。
+ * <p>
+ * 捕获所有未处理异常，构造告警事件并送入 {@link AlertManager}。
+ * 返回 null 表示不处理响应，交给后续处理器（如 Spring 默认的 DefaultHandlerExceptionResolver）。
+ * </p>
+ */
 public class AlertExceptionResolver implements HandlerExceptionResolver, Ordered {
     private final AlertProperties properties;
     private final SpringAlertEventFactory eventFactory;

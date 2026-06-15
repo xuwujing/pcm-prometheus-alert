@@ -8,6 +8,17 @@ import java.lang.management.MemoryMXBean;
 import java.lang.management.MemoryUsage;
 import java.lang.management.ThreadMXBean;
 
+/**
+ * 指标告警采集器 —— 通过 @Scheduled 定时采样 JVM 指标。
+ * <p>
+ * 当前支持：
+ * <ul>
+ *   <li>JVM 堆内存使用率（超过 jvmMemoryThreshold 触发）</li>
+ *   <li>线程数（超过 threadThreshold 触发）</li>
+ * </ul>
+ * CPU 采样预留后续版本。
+ * </p>
+ */
 public class MetricAlertCollector {
     private final AlertProperties properties;
     private final SpringAlertEventFactory eventFactory;

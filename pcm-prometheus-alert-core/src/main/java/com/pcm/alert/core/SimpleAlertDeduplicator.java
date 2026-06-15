@@ -5,9 +5,18 @@ import java.time.Instant;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * 简单去重器 —— 基于内存的冷却窗口去重。
+ * <p>
+ * 按 type|serviceName|requestPath|summary 组合 key，
+ * 同一 key 在 cooldownSeconds 内只允许发送一次。
+ * </p>
+ */
 public class SimpleAlertDeduplicator implements AlertDeduplicator {
     private final boolean enabled;
     private final long cooldownSeconds;
+
+    /** key → 上次发送时间 */
     private final Map<String, Instant> lastSentAt = new ConcurrentHashMap<>();
 
     public SimpleAlertDeduplicator(boolean enabled, long cooldownSeconds) {
@@ -31,6 +40,9 @@ public class SimpleAlertDeduplicator implements AlertDeduplicator {
         }
     }
 
+    /**
+     * 构建去重 key：type|serviceName|requestPath|summary。
+     */
     private String buildKey(AlertEvent event) {
         StringBuilder key = new StringBuilder();
         key.append(event.getType()).append('|');

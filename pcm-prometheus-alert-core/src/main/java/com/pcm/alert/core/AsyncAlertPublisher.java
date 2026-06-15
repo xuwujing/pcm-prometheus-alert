@@ -11,6 +11,13 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+/**
+ * 异步推送器 —— 通过内存队列解耦告警生产与推送。
+ * <p>
+ * 内部使用单线程从有界队列中消费消息并委托给底层推送器。
+ * 队列满时降级为同步直接推送，避免消息丢失。
+ * </p>
+ */
 public class AsyncAlertPublisher implements AlertPublisher {
     private static final Logger log = LoggerFactory.getLogger(AsyncAlertPublisher.class);
 
@@ -34,6 +41,9 @@ public class AsyncAlertPublisher implements AlertPublisher {
         }
     }
 
+    /**
+     * 优雅关闭：停止接收新消息，等待队列清空后退出。
+     */
     public void shutdown() {
         running.set(false);
         executorService.shutdownNow();

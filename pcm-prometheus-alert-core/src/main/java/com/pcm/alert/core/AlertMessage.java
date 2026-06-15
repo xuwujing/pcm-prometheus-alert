@@ -4,16 +4,43 @@ import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+/**
+ * 告警消息模型 —— 渲染后的可推送消息。
+ * <p>
+ * 由 {@link AlertMessageRenderer} 从 {@link AlertEvent} 生成，
+ * 包含标题、内容、webhook 地址和扩展属性。
+ * </p>
+ */
 public class AlertMessage {
+
+    /** 消息标题 */
     private String title;
+
+    /** 消息正文 */
     private String content;
+
+    /** 告警级别 */
     private AlertLevel level;
+
+    /** 告警类型 */
     private AlertType type;
+
+    /** 目标 webhook 地址 */
     private String webhook;
+
+    /** 模板名称（预留） */
     private String templateName = "default";
+
+    /** 接收人（预留） */
     private String receiver;
+
+    /** 发生时间 */
     private Instant occurredAt = Instant.now();
+
+    /** 扩展属性（eventId、serviceName、traceId 等） */
     private Map<String, Object> attributes = new LinkedHashMap<>();
+
+    // ---- getters / setters ----
 
     public String getTitle() {
         return title;

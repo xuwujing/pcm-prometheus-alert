@@ -11,6 +11,13 @@ import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+/**
+ * Webhook 推送器 —— 通过 HTTP POST 发送 JSON 告警消息。
+ * <p>
+ * 使用 JDK 原生 HttpURLConnection，无额外依赖。
+ * 推送失败仅记录 WARN 日志，不向上抛出异常。
+ * </p>
+ */
 public class WebhookAlertPublisher implements AlertPublisher {
     private static final Logger log = LoggerFactory.getLogger(WebhookAlertPublisher.class);
 
@@ -54,6 +61,9 @@ public class WebhookAlertPublisher implements AlertPublisher {
         }
     }
 
+    /**
+     * 构建 JSON 请求体。
+     */
     protected String buildPayload(AlertMessage message) throws Exception {
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("title", message.getTitle());

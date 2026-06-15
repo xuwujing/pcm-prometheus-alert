@@ -1,5 +1,13 @@
 package com.pcm.alert.core;
 
+/**
+ * 默认消息渲染器 —— 将事件格式化为 key: value 文本。
+ * <p>
+ * 输出格式：标题为 [LEVEL] TYPE - serviceName，
+ * 内容为 service/env/host/traceId/path/method/statusCode/costMs/summary/detail/stackTrace 的逐行拼接。
+ * 堆栈截断至 4000 字符。
+ * </p>
+ */
 public class DefaultAlertMessageRenderer implements AlertMessageRenderer {
     private final String webhook;
 
@@ -32,6 +40,9 @@ public class DefaultAlertMessageRenderer implements AlertMessageRenderer {
         append(content, "traceId", event.getTraceId());
         append(content, "path", event.getRequestPath());
         append(content, "method", event.getRequestMethod());
+        if (event.getStatusCode() > 0) {
+            append(content, "statusCode", String.valueOf(event.getStatusCode()));
+        }
         if (event.getCostMs() > 0) {
             append(content, "costMs", String.valueOf(event.getCostMs()));
         }

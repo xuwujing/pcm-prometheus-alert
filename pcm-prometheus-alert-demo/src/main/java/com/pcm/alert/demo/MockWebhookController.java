@@ -9,6 +9,12 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.Collections;
 import java.util.Map;
 
+/**
+ * Mock Webhook 接收器 —— 模拟 IM webhook 服务端。
+ * <p>
+ * 接收告警推送的 JSON 并打印日志，用于本地开发验证。
+ * </p>
+ */
 @RestController
 public class MockWebhookController {
     private static final Logger log = LoggerFactory.getLogger(MockWebhookController.class);
