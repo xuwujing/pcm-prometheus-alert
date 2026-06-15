@@ -33,6 +33,7 @@ public class AlertProperties {
     private Metric metric = new Metric();
     private Extensions extensions = new Extensions();
     private Custom custom = new Custom();
+    private Dashboard dashboard = new Dashboard();
 
     // ---- getters / setters ----
 
@@ -130,6 +131,14 @@ public class AlertProperties {
 
     public void setCustom(Custom custom) {
         this.custom = custom;
+    }
+
+    public Dashboard getDashboard() {
+        return dashboard;
+    }
+
+    public void setDashboard(Dashboard dashboard) {
+        this.dashboard = dashboard;
     }
 
     /** 推送器配置 */
@@ -453,6 +462,20 @@ public class AlertProperties {
 
         public void setInfoWebhook(String infoWebhook) {
             this.infoWebhook = infoWebhook;
+        }
+    }
+
+    /** 仪表盘配置 —— 内置监控页面，类似 Druid 监控 */
+    public static class Dashboard {
+        /** 是否启用仪表盘，默认 true */
+        private boolean enabled = true;
+
+        public boolean isEnabled() {
+            return enabled;
+        }
+
+        public void setEnabled(boolean enabled) {
+            this.enabled = enabled;
         }
     }
 }

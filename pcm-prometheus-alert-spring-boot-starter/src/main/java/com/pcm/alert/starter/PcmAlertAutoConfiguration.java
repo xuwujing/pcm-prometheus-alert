@@ -172,6 +172,17 @@ public class PcmAlertAutoConfiguration {
     }
 
     /**
+     * 仪表盘控制器 —— 类似 Druid 监控页面。
+     * 条件：pcm.alert.dashboard.enabled=true（默认 true）。
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    @ConditionalOnProperty(prefix = "pcm.alert.dashboard", name = "enabled", havingValue = "true", matchIfMissing = true)
+    public DashboardController dashboardController() {
+        return new DashboardController();
+    }
+
+    /**
      * 解析 webhook 格式字符串。
      */
     private WebhookFormat parseWebhookFormat(String format) {

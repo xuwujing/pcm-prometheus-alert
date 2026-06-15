@@ -60,7 +60,7 @@
     <script>
         function loadDashboard() {
             document.getElementById('dashboard').innerHTML = '<div class="loading">加载中...</div>';
-            fetch('/api/dashboard')
+            fetch('/pcm-alert/api/dashboard')
                 .then(res => res.json())
                 .then(data => render(data))
                 .catch(err => {

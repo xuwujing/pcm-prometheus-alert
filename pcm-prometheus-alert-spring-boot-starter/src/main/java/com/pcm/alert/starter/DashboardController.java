@@ -1,4 +1,4 @@
-package com.pcm.alert.web;
+package com.pcm.alert.starter;
 
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -13,11 +13,15 @@ import java.util.Map;
 
 /**
  * 告警仪表盘 API 控制器。
+ * <p>
+ * 内置在 starter 中，类似 Druid 的监控页面。
+ * 通过 pcm.alert.dashboard.enabled=true 启用。
+ * </p>
  */
 @RestController
 public class DashboardController {
 
-    @GetMapping("/api/dashboard")
+    @GetMapping("/pcm-alert/api/dashboard")
     public Map<String, Object> dashboard() {
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("jvm", jvmInfo());

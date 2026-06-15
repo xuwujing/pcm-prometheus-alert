@@ -1,5 +1,5 @@
 server:
-  port: 8089
+  port: 18089
 
 spring:
   application:
@@ -8,7 +8,7 @@ spring:
 pcm:
   alert:
     enabled: true
-    webhook: http://127.0.0.1:8089/mock/webhook
+    webhook: http://127.0.0.1:18089/mock/webhook
     webhook-format: default
     service-name: ${spring.application.name}
     environment: local
@@ -55,6 +55,8 @@ pcm:
     custom:
       enabled: true
       level-routing-enabled: false
+    dashboard:
+      enabled: true
 
 management:
   endpoints:

@@ -51,6 +51,7 @@ mvn clean package -DskipTests
 
 # 3. 启动 demo
 java -jar pcm-prometheus-alert-demo/target/pcm-prometheus-alert-demo-0.1.0-SNAPSHOT.jar
+# 访问 http://localhost:18089/pcm-alert/ 查看仪表盘
 ```
 
 启动后访问：
@@ -62,6 +63,7 @@ java -jar pcm-prometheus-alert-demo/target/pcm-prometheus-alert-demo-0.1.0-SNAPS
 | `GET /demo/slow?millis=1500` | 触发慢请求告警 |
 | `GET /demo/status-500` | 触发 HTTP 状态码告警 |
 | `POST /mock/webhook` | Mock webhook 接收器（查看推送内容） |
+| `GET /pcm-alert/` | 内置仪表盘（JVM/线程/系统/告警状态） |
 
 ### 方式二：业务项目接入
 
@@ -125,7 +127,10 @@ pcm-prometheus-alert/
 │       ├── SpringAlertEventFactory.java        # 事件工厂
 │       ├── AlertExceptionResolver.java         # 异常告警处理器
 │       ├── SlowRequestFilter.java              # 慢请求过滤器
-│       └── MetricAlertCollector.java           # 指标采集器
+│       ├── MetricAlertCollector.java           # 指标采集器
+│       └── DashboardController.java            # 仪表盘 API（内置监控页面）
+│   └── src/main/resources/static/
+│       └── index.html                          # 仪表盘页面
 ├── pcm-prometheus-alert-sql-starter/           # SQL 告警（Druid 集成）
 │   └── src/main/java/com/pcm/alert/sql/
 │       ├── SqlAlertAutoConfiguration.java      # SQL 告警自动装配
@@ -138,12 +143,6 @@ pcm-prometheus-alert/
 │       ├── PrometheusAlertMetrics.java         # Prometheus 指标暴露
 │       ├── SkyWalkingTraceExtractor.java       # SkyWalking 链路追踪
 │       └── ElkAlertLogger.java                # ELK 日志采集
-├── pcm-prometheus-alert-web/                   # Web 管理界面
-│   └── src/main/
-│       ├── java/com/pcm/alert/web/
-│       │   ├── WebApplication.java             # 启动类
-│       │   └── DashboardController.java        # 仪表盘 API
-│       └── resources/static/index.html         # 仪表盘页面
 ├── pcm-prometheus-alert-demo/                  # 本地演示
 │   └── src/main/java/com/pcm/alert/demo/
 │       ├── DemoApplication.java                # 启动类
@@ -306,14 +305,18 @@ pcm:
 
 ## Web 管理界面
 
-启动 web 模块后访问 `http://localhost:8090`：
+仪表盘内置在 starter 中（类似 Druid 监控页面），引入 starter 后自动生效。
 
-```bash
-cd pcm-prometheus-alert-web
-mvn spring-boot:run
+访问 `http://localhost:{server.port}/pcm-alert/` 即可查看 JVM 内存、线程、系统信息和告警状态。
+
+可通过配置关闭：
+
+```yaml
+pcm:
+  alert:
+    dashboard:
+      enabled: false
 ```
-
-仪表盘提供 JVM 内存、线程、系统信息和告警状态的实时监控。
 
 ## 测试
 
@@ -329,11 +332,17 @@ mvn test
 | core | `DefaultAlertMessageRendererTest` | 1 |
 | core | `SimpleAlertDeduplicatorTest` | 2 |
 | core | `WebhookPayloadBuilderTest` | 7 |
+| sql-starter | `DruidEventAdapterTest` | 4 |
+| sql-starter | `SqlAlertPropertiesTest` | 2 |
+| extensions | `PrometheusAlertMetricsTest` | 4 |
+| extensions | `SkyWalkingTraceExtractorTest` | 5 |
+| extensions | `ElkAlertLoggerTest` | 4 |
 | starter | `SpringAlertEventFactoryTest` | 11 |
 | starter | `SlowRequestFilterTest` | 7 |
 | starter | `PcmAlertAutoConfigurationTest` | 9 |
+| starter | `DashboardControllerTest` | 1 |
 | demo | `DemoApplicationTests` | 3 |
-| **合计** | | **48** |
+| **合计** | | **68** |
 
 ## 扩展集成
 
@@ -353,10 +362,6 @@ pcm:
 - `SkyWalkingTraceExtractor`：通过反射调用 `TraceContext.traceId()` 补充 traceId
 - `ElkAlertLogger`：以 `pcm.alert.event:` 前缀输出结构化 JSON 日志
 
-## 设计文档
-
-> 设计文档托管在独立私有仓库中，公开仓库仅包含代码和 README。
-> 如需访问完整设计文档，请联系项目维护者。
 
 ## 常见问题
 
@@ -384,7 +389,7 @@ pcm:
 
 | 版本 | 说明 |
 |------|------|
-| v0.1.0 | MVP：异常/慢请求/状态码/指标告警 + 多平台推送 + 级别路由 + 扩展集成预留 |
+| v0.1.0 | MVP：异常/慢请求/状态码/指标/SQL 告警 + 多平台推送 + 级别路由 + Prometheus/SkyWalking/ELK 集成 + Web 仪表盘 |
 
 ## 开源协议
 
